@@ -1,9 +1,7 @@
 """Module for misc Event methods which does not fit in another submodule"""
 
-import os
 from typing import List
 
-from flask_uploads import IMAGES, UploadSet
 from werkzeug.datastructures import FileStorage
 
 from collectives.models.activity_type import ActivityType
@@ -13,11 +11,15 @@ from collectives.models.question import QuestionAnswer
 from collectives.models.user import User
 from collectives.utils import render_markdown
 from collectives.utils.misc import is_valid_image
+from collectives.utils.storage import IMAGES, FileStore
 
-photos = UploadSet("photos", IMAGES)
-"""Upload instance for events photos
+photos = FileStore("photos", extensions=IMAGES, versioned=True)
+"""Store for event photos
 
-:type: flask_uploads.UploadSet"""
+Keys are versioned so that a new photo gets a new URL, and browsers do not
+keep displaying the previous one.
+
+:type: :py:class:`collectives.utils.storage.FileStore`"""
 
 
 class EventMiscMixin:
@@ -74,14 +76,21 @@ class EventMiscMixin:
         user_activities = user.activities_with_role()
         return any(activity in user_activities for activity in self.activity_types)
 
+    def photo_source(self):
+        """Source of the event photo, to be resized by ``Flask-Images``.
+
+        Depending on the storage backend, this is either a path relative to
+        ``IMAGES_PATH`` or the URL the image can be downloaded from.
+
+        :return: the source of the photo, or None if the event has none
+        :rtype: string
+        """
+        return photos.image_source(self.photo) if self.photo else None
+
     def delete_photo(self):
         """Remove and dereference an event photo."""
         if self.photo:
-            try:
-                os.remove(photos.path(self.photo))
-            except (OSError, FileNotFoundError):
-                # If the file does not exist, we just ignore the error
-                pass
+            photos.delete(self.photo)
             self.photo = None
 
     def save_photo(self, file: FileStorage) -> bool:
@@ -100,8 +109,7 @@ class EventMiscMixin:
 
             self.delete_photo()  # remove existing
 
-            filename = photos.save(file, name="event-" + str(self.id) + ".")
-            self.photo = filename
+            self.photo = photos.save(file, name="event-" + str(self.id) + ".")
         return True
 
     def set_rendered_description(self, description):

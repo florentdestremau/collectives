@@ -4,13 +4,13 @@ import json
 
 from flask import abort, request, url_for
 from flask_login import current_user
-from flask_uploads import UploadNotAllowed
 from marshmallow import fields
 from sqlalchemy import or_
 
 from collectives.api.common import blueprint, marshmallow
 from collectives.models import Configuration, Event, UploadedFile, db
 from collectives.utils.access import valid_user
+from collectives.utils.storage import UploadNotAllowed
 from collectives.utils.time import current_time
 
 

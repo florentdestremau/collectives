@@ -187,7 +187,9 @@ def photo_uri(event):
     :rtype: string
     """
     if event.photo is not None:
-        return url_for("images.crop", filename=event.photo, width=350, height=250)
+        return url_for(
+            "images.crop", filename=event.photo_source(), width=350, height=250
+        )
     return url_for("static", filename=f"img/default/events/event{event.id % 8 + 1}.svg")
 
 

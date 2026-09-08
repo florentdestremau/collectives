@@ -1,11 +1,9 @@
 """Module for misc User methods which does not fit in another submodule"""
 
 import datetime
-import os
 from typing import List
 
 import phonenumbers
-from flask_uploads import IMAGES, UploadSet
 from sqlalchemy.orm import selectinload
 from werkzeug.datastructures import FileStorage
 
@@ -15,9 +13,16 @@ from collectives.models.registration import Registration, RegistrationStatus
 from collectives.models.reservation import ReservationStatus
 from collectives.models.user.enum import Gender, UserType
 from collectives.utils.misc import is_valid_image
+from collectives.utils.storage import IMAGES, FileStore
 
-# Upload
-avatars = UploadSet("avatars", IMAGES)
+avatars = FileStore("avatars", extensions=IMAGES, versioned=True)
+"""Store for user avatars
+
+Keys are versioned so that a new avatar gets a new URL, and browsers do not
+keep displaying the previous one.
+
+:type: :py:class:`collectives.utils.storage.FileStore`
+"""
 
 
 class UserMiscMixin:
@@ -38,18 +43,25 @@ class UserMiscMixin:
             if not is_valid_image(file.stream):
                 return False
 
-            filename = avatars.save(file, name="user-" + str(self.id) + ".")
-            self.avatar = filename
+            self.delete_avatar()  # remove existing
+            self.avatar = avatars.save(file, name="user-" + str(self.id) + ".")
         return True
+
+    def avatar_source(self):
+        """Source of the avatar image, to be resized by ``Flask-Images``.
+
+        Depending on the storage backend, this is either a path relative to
+        ``IMAGES_PATH`` or the URL the image can be downloaded from.
+
+        :return: the source of the avatar, or None if the user has none
+        :rtype: string
+        """
+        return avatars.image_source(self.avatar) if self.avatar else None
 
     def delete_avatar(self):
         """Remove and dereference an user avatar."""
         if self.avatar:
-            try:
-                os.remove(avatars.path(self.avatar))
-            except (OSError, FileNotFoundError):
-                # If the file does not exist, we just ignore the error
-                pass
+            avatars.delete(self.avatar)
             self.avatar = None
 
     def anonymize(self):

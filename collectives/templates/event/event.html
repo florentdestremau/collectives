@@ -113,7 +113,7 @@
 
 
 
-    <img class="photo collective-display--photo" src="{% if event.photo %}{{ url_for('images.fit', filename=event.photo, width=1100 ) }}{% endif %}"/>
+    <img class="photo collective-display--photo" src="{% if event.photo %}{{ url_for('images.fit', filename=event.photo_source(), width=1100 ) }}{% endif %}"/>
 
 
     {# Leaders #}

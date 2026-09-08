@@ -65,3 +65,28 @@ Module ``collectives.utils.url``
 ---------------------------------
 .. automodule:: collectives.utils.url
     :members:
+
+Module ``collectives.utils.storage``
+------------------------------------
+.. automodule:: collectives.utils.storage
+    :members:
+
+Module ``collectives.utils.storage.base``
+-------------------------------------------
+.. automodule:: collectives.utils.storage.base
+    :members:
+
+Module ``collectives.utils.storage.store``
+--------------------------------------------
+.. automodule:: collectives.utils.storage.store
+    :members:
+
+Module ``collectives.utils.storage.filesystem``
+-------------------------------------------------
+.. automodule:: collectives.utils.storage.filesystem
+    :members:
+
+Module ``collectives.utils.storage.s3``
+-----------------------------------------
+.. automodule:: collectives.utils.storage.s3
+    :members:

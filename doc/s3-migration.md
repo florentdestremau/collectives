@@ -185,7 +185,30 @@ surtout sa sauvegarde.
 - Une dépendance externe supplémentaire dans le chemin critique des pages qui
   affichent des images.
 
-## 5. Conclusion
+## 5. Ce que le POC couvre
+
+Une première implémentation de la couche décrite au §3 est disponible dans
+`collectives/utils/storage/` (voir `doc/source/storage.rst`) :
+
+- l'interface `StorageBackend` et ses deux implémentations, `FilesystemBackend`
+  (comportement historique, y compris la résolution des conflits de noms) et
+  `S3Backend` (boto3, dépendance optionnelle installée par l'extra `s3`) ;
+- l'objet `FileStore`, qui remplace `UploadSet` côté application et reste
+  compatible avec le validateur `FileAllowed` de Flask-WTF ;
+- trois stores portés : `documents` (pièces jointes), `avatars` et `photos` —
+  ces deux derniers avec des clés versionnées, qui règlent le problème de
+  cache-busting du §2.4 ;
+- le calcul de `is_image` au dépôt, stocké en base (§2.2), avec la migration
+  Alembic correspondante ;
+- des tests exécutés **deux fois, une fois par backend** — API d'upload,
+  téléchargement, suppression, refus d'extension — via un client S3 en mémoire.
+
+Restent à porter, avec le même mécanisme : `imgtypeequip` (nécessite de passer
+les deux gabarits équipement par `url()`), et les stores `tech` et `private` de
+la configuration à chaud. Restent également à faire : un test d'intégration
+contre MinIO ou `moto`, et la bascule des URLs de vignettes vers un CDN.
+
+## 6. Conclusion
 
 Techniquement, le chantier est **modéré et bien circonscrit** : le code de stockage est
 déjà concentré dans quatre modèles et une route, ce qui est la meilleure nouvelle de

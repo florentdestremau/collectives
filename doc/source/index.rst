@@ -26,6 +26,7 @@ Code, participation, and issue reporting can be done on github: `https://github.
 
    howto
    configuration
+   storage
    architecture
    github_validation
    html

@@ -33,7 +33,9 @@ def avatar_url(user):
         it returns the default avatar SVG.
     """
     if user.avatar is not None:
-        return url_for("images.crop", filename=user.avatar, width=30, height=30)
+        return url_for(
+            "images.crop", filename=user.avatar_source(), width=30, height=30
+        )
     return url_for(
         "static", filename="img/default/users/avatar-0" + str(user.id % 6 + 1) + ".png"
     )

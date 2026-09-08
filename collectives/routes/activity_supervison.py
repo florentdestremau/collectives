@@ -15,7 +15,6 @@ from flask import (
     url_for,
 )
 from flask_login import current_user
-from flask_uploads import UploadNotAllowed
 from sqlalchemy.orm import joinedload
 from werkzeug.datastructures import CombinedMultiDict
 
@@ -47,6 +46,7 @@ from collectives.models.badge import BadgeIds
 from collectives.utils import badges, export
 from collectives.utils.access import confidentiality_agreement, user_is, valid_user
 from collectives.utils.csv import process_stream
+from collectives.utils.storage import UploadNotAllowed
 from collectives.utils.time import current_time
 from collectives.utils.url import slugify
 

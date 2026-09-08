@@ -50,6 +50,9 @@ dependencies = [
 deploy = [
     "waitress",
 ]
+s3 = [
+    "boto3",
+]
 
 [dependency-groups]
 dev = [

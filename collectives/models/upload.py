@@ -4,19 +4,19 @@ import os
 from datetime import timedelta
 
 from flask import url_for
-from flask_uploads import DOCUMENTS, IMAGES, UploadSet
 from sqlalchemy.orm import validates
 from werkzeug.utils import secure_filename
 
 from collectives.models.globals import db
 from collectives.models.user import User
 from collectives.utils.misc import is_valid_image
+from collectives.utils.storage import DOCUMENTS, IMAGES, FileStore
 from collectives.utils.time import current_time
 
-documents = UploadSet("documents", DOCUMENTS + IMAGES + ("gpx",))
-"""Upload instance for documents
+documents = FileStore("documents", extensions=DOCUMENTS + IMAGES + ("gpx",))
+"""Store for the files attached to events and activities
 
-:type: flask_uploads.UploadSet
+:type: :py:class:`collectives.utils.storage.FileStore`
 """
 
 
@@ -63,6 +63,15 @@ class UploadedFile(db.Model):
     """Size, in bytes
 
     :type: Integer
+    """
+
+    _is_image = db.Column("is_image", db.Boolean, nullable=True)
+    """Whether the file is a valid image, computed once when it is uploaded.
+
+    Null for files uploaded before this column existed; see
+    :py:meth:`is_image`.
+
+    :type: bool
     """
 
     event_id = db.Column(db.Integer, db.ForeignKey("events.id"), index=True)
@@ -140,12 +149,39 @@ class UploadedFile(db.Model):
         return value
 
     def is_image(self):
-        """Checks if  this file is an image
+        """Checks if this file is an image
 
-        :return: True if extension is in flask_uploads.IMAGES
+        The answer is computed once when the file is uploaded and stored in
+        database, as reading the file back is expensive when it does not live
+        on a local disk. Files uploaded before that column existed are checked
+        on first access, then remembered.
+
+        :return: True if the file is a valid image
+        :rtype: bool
         """
-        ext = os.path.splitext(self.name)[1][1:]
-        return ext in IMAGES and is_valid_image(self.full_path())
+        if self._is_image is None:
+            self._is_image = self.check_is_image()
+        return self._is_image
+
+    def check_is_image(self, file=None):
+        """Reads the file to check whether it is a valid image.
+
+        :param file: the uploaded file, if it is still at hand. Otherwise the
+            stored file is read back.
+        :type file: :py:class:`werkzeug.datastructures.FileStorage`
+        :return: True if the extension is an image extension and the content is
+            a valid image
+        :rtype: bool
+        """
+        ext = os.path.splitext(self.name)[1][1:].lower()
+        if ext not in IMAGES:
+            return False
+
+        try:
+            stream = file.stream if file is not None else documents.open(self.path)
+            return is_valid_image(stream)
+        except (FileNotFoundError, OSError):
+            return False
 
     def save_file(self, file):
         """Save from a raw file
@@ -155,30 +191,20 @@ class UploadedFile(db.Model):
         """
         self.name = file.filename
         name, ext = os.path.splitext(self.name)
+        self._is_image = self.check_is_image(file)
         self.path = documents.save(
             file, name=f"{self.date.strftime('%y_%m_%d')}_{name}{ext}"
         )
-        file_stats = os.stat(self.full_path())
-        self.size = file_stats.st_size
-
-    def full_path(self):
-        """:returns: the full on-disk file path
-        :rtype: string
-        """
-        return documents.path(self.path)
+        self.size = documents.size(self.path)
 
     def delete_file(self):
-        """Deletes the on-disk file"""
-        try:
-            os.remove(self.full_path())
-        except (FileNotFoundError, OSError):
-            # If the file does not exist, we just ignore the error
-            pass
+        """Deletes the stored file"""
+        documents.delete(self.path)
         self.path = None
         self.size = 0
 
     def url(self):
-        """:returns: the static URL for an uploaded file
+        """:returns: the URL an uploaded file can be downloaded from
         :rtype: str
         """
         return documents.url(self.path)
@@ -199,7 +225,7 @@ class UploadedFile(db.Model):
         return (
             url_for(
                 "images.fit",
-                filename=self.path,
+                filename=documents.image_source(self.path),
                 width=width,
                 height=height,
                 _external=True,
