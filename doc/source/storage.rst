@@ -64,6 +64,12 @@ The ``boto3`` dependency is optional; install it with the ``s3`` extra::
 
     uv sync --extra s3
 
+.. warning::
+    ``uv run`` syncs the environment to the extras it is given, and uninstalls
+    the others: every ``uv run`` of a deployment must repeat ``--extra s3``, as
+    ``deployment/docker/entrypoint.sh`` does. The docker image ships ``boto3``
+    (about 30 MB) whichever backend is in use.
+
 Migrating an existing installation
 ------------------------------------
 
