@@ -70,16 +70,125 @@ The ``boto3`` dependency is optional; install it with the ``s3`` extra::
     ``deployment/docker/entrypoint.sh`` does. The docker image ships ``boto3``
     (about 30 MB) whichever backend is in use.
 
+Bucket and credentials
+------------------------
+
+Two policies are needed. The first one is for the account whose keys the
+application uses. ``head_object``, used to read a file size and check for a
+conflicting name, is covered by ``s3:GetObject``:
+
+.. code-block:: json
+
+    {"Version": "2012-10-17", "Statement": [
+      {"Effect": "Allow",
+       "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
+       "Resource": "arn:aws:s3:::collectives-uploads/*"},
+      {"Effect": "Allow", "Action": ["s3:ListBucket"],
+       "Resource": "arn:aws:s3:::collectives-uploads"}
+    ]}
+
+The second one lets browsers read the files, and is restricted to the prefixes
+that are actually served:
+
+.. code-block:: json
+
+    {"Version": "2012-10-17", "Statement": [
+      {"Sid": "PublicRead", "Effect": "Allow", "Principal": "*",
+       "Action": "s3:GetObject",
+       "Resource": ["arn:aws:s3:::collectives-uploads/avatars/*",
+                    "arn:aws:s3:::collectives-uploads/photos/*",
+                    "arn:aws:s3:::collectives-uploads/documents/*"]}
+    ]}
+
+On Amazon S3, the bucket *Block Public Access* setting must be turned off for
+this policy to take effect. Other providers expose the same thing as a public
+container or the very same bucket policy.
+
+.. note::
+    This makes the event attachments readable by anyone knowing their URL. That
+    is already the case today, as they are served without authentication, so
+    this is not a regression — but it is the right moment to decide whether it
+    should stay that way. If not, the ``documents`` store must be declared
+    ``private``, and its files will then be served through signed URLs.
+
+No CORS configuration is needed: images are loaded through ``<img>`` tags, not
+by scripts.
+
 Migrating an existing installation
 ------------------------------------
 
 Objects are laid out as ``<S3_KEY_PREFIX><store name>/<key>``, which mirrors
-the layout of the upload directories. Migrating therefore only requires copying
-the files, the paths recorded in database staying valid::
+the layout of the upload directories, so migrating only requires copying the
+files: the paths recorded in database stay valid.
 
-    aws s3 sync collectives/static/uploads/documents s3://collectives-uploads/documents/
-    aws s3 sync collectives/static/uploads/avatars   s3://collectives-uploads/avatars/
+.. warning::
+    Event photos live at the **root** of the upload directory
+    (``UPLOADED_PHOTOS_DEST`` is ``static/uploads`` itself), next to the
+    subdirectories of the other stores. Copying them requires excluding
+    everything that sits in a subdirectory, or the whole volume ends up
+    duplicated under ``photos/``.
 
-Once the files are copied and ``STORAGE_BACKEND`` is set to ``s3``, the
-persistent volume is only needed for the stores that have not been migrated
-yet.
+.. code-block:: bash
+
+    E="--endpoint-url https://s3.gra.io.cloud.ovh.net"  # omit for Amazon S3
+    B=s3://collectives-uploads
+
+    aws $E s3 sync collectives/static/uploads/documents $B/documents/
+    aws $E s3 sync collectives/static/uploads/avatars   $B/avatars/
+    aws $E s3 sync collectives/static/uploads           $B/photos/ --exclude "*/*"
+
+Kubernetes runbook
+....................
+
+The persistent volume claim is ``ReadWriteOnce``, so a job cannot mount it
+while the application pod holds it. The deployment already uses the
+``Recreate`` strategy, meaning a short interruption is part of every release
+anyway: the simplest path is a ten minute maintenance window.
+
+#. Build and publish the image, and create the bucket, the account and the two
+   policies above. Check the credentials from a workstation before going
+   further.
+
+#. Add the credentials to the existing secret:
+
+   .. code-block:: yaml
+
+       stringData:
+         s3_access_key_id: --to-be-replaced--
+         s3_secret_access_key: --to-be-replaced--
+
+#. Optionally, pre-copy the files while the site is still up, with
+   ``kubectl cp`` and the commands above. Files are only ever added, never
+   modified, so the delta left to copy during the window becomes negligible.
+
+#. Open the window: ``kubectl scale deploy/collectives --replicas=0``.
+
+#. Copy the files with ``kubectl apply -f deployment/k8s/migrate-uploads-to-s3.yaml``,
+   and wait for the job to complete.
+
+#. Set ``STORAGE_BACKEND`` and the ``S3_*`` variables in the deployment (the
+   block is present, commented out, in ``collectives.example.yaml``), apply,
+   and scale back to one replica. The entrypoint runs ``flask db upgrade``,
+   which adds the ``is_image`` column.
+
+#. Check, in that order: the home page (event photos), an avatar, then a full
+   round trip — attach a file to a test event, check the object appears in the
+   bucket, delete it, check it is gone.
+
+Rolling back
+..............
+
+Remove ``STORAGE_BACKEND`` from the deployment and apply again. The volume is
+untouched and the ``is_image`` column is nullable, so an older image tolerates
+it. Only the files uploaded while running on the object store are missing from
+the volume; a reversed ``aws s3 sync`` brings them back. Keep the volume for a
+few weeks before deleting it.
+
+What still needs the volume
+.............................
+
+Only three of the six stores are migrated. ``imgtypeequip``, ``tech`` and
+``private`` — which hold, among others, the club logo, the terms of sale and
+the volunteer certificate template — are still written to disk. Until they are
+migrated too, the volume must stay mounted, the ``Recreate`` strategy must stay,
+and the deployment cannot be scaled beyond one replica.
