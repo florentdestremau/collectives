@@ -393,6 +393,77 @@ UPLOADED_PRIVATE_DEST = os.path.join(basedir, "collectives/private_assets")
 :type: string
 """
 
+STORAGE_BACKEND = environ.get("STORAGE_BACKEND") or "filesystem"
+"""Backend used to store user uploaded files.
+
+``filesystem`` keeps the files in the ``UPLOADED_*_DEST`` folders above and
+serves them from the application. ``s3`` stores them in an S3-compatible
+bucket, described by the ``S3_*`` settings below.
+
+Can be set using environment variable.
+
+:type: string
+"""
+
+S3_BUCKET = environ.get("S3_BUCKET")
+"""Name of the bucket holding the uploaded files.
+
+:type: string
+"""
+
+S3_ENDPOINT_URL = environ.get("S3_ENDPOINT_URL")
+"""Endpoint of the object store.
+
+Leave empty for Amazon S3 itself, set it for any other S3-compatible provider
+(eg ``https://s3.gra.io.cloud.ovh.net``).
+
+:type: string
+"""
+
+S3_REGION = environ.get("S3_REGION")
+"""Region of the bucket, eg ``eu-west-3``.
+
+:type: string
+"""
+
+S3_ACCESS_KEY_ID = environ.get("S3_ACCESS_KEY_ID")
+"""Access key of the account used to read and write the bucket.
+
+Leave empty to let boto3 pick up the ambient credentials (instance role,
+``~/.aws/credentials``, ``AWS_*`` environment variables).
+
+:type: string
+"""
+
+S3_SECRET_ACCESS_KEY = environ.get("S3_SECRET_ACCESS_KEY")
+"""Secret key of the account used to read and write the bucket. See
+:py:data:`S3_ACCESS_KEY_ID`.
+
+:type: string
+"""
+
+S3_PUBLIC_URL = environ.get("S3_PUBLIC_URL")
+"""Base URL from which the public files of the bucket are served.
+
+Either the bucket public endpoint, or the CDN in front of it. Required by the
+``s3`` backend to build the URL of public files.
+
+:type: string
+"""
+
+S3_KEY_PREFIX = environ.get("S3_KEY_PREFIX") or ""
+"""Prefix prepended to every object key, to share a bucket between several
+instances (eg ``test/``).
+
+:type: string
+"""
+
+S3_URL_EXPIRATION = int(environ.get("S3_URL_EXPIRATION") or 3600)
+"""Lifetime, in seconds, of the signed URLs generated for private files.
+
+:type: int
+"""
+
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
 """ Allowed extension for uploaded images
 

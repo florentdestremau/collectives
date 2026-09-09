@@ -27,18 +27,18 @@ from collectives.forms.user import (
     LocalUserForm,
     RoleForm,
 )
-from collectives.models import avatars, image_equipment_type, photos
-from collectives.models.upload import documents
+from collectives.models import image_equipment_type
 from collectives.routes import technician
 
 csrf = CSRFProtect()
 
 
 def configure_forms(app):
-    """Configure forms at app startup (eg uploads)"""
-    configure_uploads(app, photos)
-    configure_uploads(app, avatars)
-    configure_uploads(app, documents)
+    """Configure forms at app startup (eg uploads)
+
+    Only the upload sets that have not been migrated to
+    :py:mod:`collectives.utils.storage` yet are configured here.
+    """
     configure_uploads(app, image_equipment_type)
     configure_uploads(app, technician.upload)
     configure_uploads(app, technician.private_upload)

@@ -18,7 +18,7 @@ COPY collectives /app/collectives/
 COPY deployment/docker/logging.cfg /app/
 COPY metadata.jso[n] /app/
 
-RUN cd /app; uv sync --locked --no-dev --extra deploy
+RUN cd /app; uv sync --locked --no-dev --extra deploy --extra s3
 
 WORKDIR /app
 

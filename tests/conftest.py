@@ -7,7 +7,9 @@ pytest_plugins = [
     "tests.fixtures.user",
     "tests.fixtures.payment",
     "tests.fixtures.stats",
+    "tests.fixtures.storage",
     "tests.mock.extranet",
     "tests.mock.payline",
+    "tests.mock.s3",
     "tests.mock.session",
 ]

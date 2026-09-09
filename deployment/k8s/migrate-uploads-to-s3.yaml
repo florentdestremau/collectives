@@ -1,0 +1,96 @@
+# One-shot job copying the uploaded files from the persistent volume to the
+# object store, as described in doc/source/storage.rst.
+#
+# The volume claim is ReadWriteOnce, so the application must be stopped before
+# running this job:
+#
+#   kubectl scale deploy/collectives --replicas=0
+#   kubectl apply -f deployment/k8s/migrate-uploads-to-s3.yaml
+#   kubectl wait --for=condition=complete job/collectives-uploads-to-s3
+#
+# Then set STORAGE_BACKEND and the S3_* variables in the deployment and scale
+# back to one replica.
+#
+# Look for the 4 --to-be-replaced-- before applying. The job is idempotent: it
+# only copies what is missing or outdated, and may be run again to pick up the
+# files uploaded since the previous run.
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: collectives-uploads-to-s3
+  labels:
+    app: collectives
+spec:
+  # Keep the pod around after completion so that its logs can be read
+  ttlSecondsAfterFinished: 86400
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: collectives
+        tier: migration
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: sync
+          image: amazon/aws-cli:latest
+          env:
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: collectives-secret
+                  key: s3_access_key_id
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: collectives-secret
+                  key: s3_secret_access_key
+            - name: AWS_DEFAULT_REGION
+              value: --to-be-replaced-- # eg gra, or eu-west-3
+            - name: BUCKET
+              value: --to-be-replaced-- # name of the bucket, without s3://
+            - name: ENDPOINT_URL
+              value: --to-be-replaced-- # eg https://s3.gra.io.cloud.ovh.net, empty for Amazon S3
+            - name: KEY_PREFIX
+              value: "" # must match S3_KEY_PREFIX, eg "test/"
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+
+              if [ -n "$ENDPOINT_URL" ]; then
+                  ENDPOINT="--endpoint-url $ENDPOINT_URL"
+              else
+                  ENDPOINT=""
+              fi
+              DEST="s3://$BUCKET/$KEY_PREFIX"
+
+              # A store that has never been used has no directory yet
+              for store in documents avatars; do
+                  if [ -d "/uploads/$store" ]; then
+                      # shellcheck disable=SC2086
+                      aws $ENDPOINT s3 sync "/uploads/$store" "$DEST$store/"
+                  else
+                      echo "No $store directory on the volume, skipping it"
+                  fi
+              done
+
+              # Event photos sit at the ROOT of the upload directory, next to
+              # the subdirectories of the other stores: everything below a
+              # subdirectory must be left out, or the whole volume would end up
+              # duplicated under photos/
+              # shellcheck disable=SC2086
+              aws $ENDPOINT s3 sync /uploads "$DEST"photos/ --exclude "*/*"
+
+              echo "Copy complete. Objects now in the bucket:"
+              # shellcheck disable=SC2086
+              aws $ENDPOINT s3 ls "$DEST" --recursive --summarize | tail -2
+          volumeMounts:
+            - name: collectives-persistent-storage
+              mountPath: /uploads
+              readOnly: true
+      volumes:
+        - name: collectives-persistent-storage
+          persistentVolumeClaim:
+            claimName: collective-pv-claim

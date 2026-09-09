@@ -32,7 +32,7 @@ from collectives.email_templates import (
     send_unregister_notification,
     send_update_waiting_list_notification,
 )
-from collectives.forms import EventForm, RegistrationForm, photos
+from collectives.forms import EventForm, RegistrationForm
 from collectives.forms.event import PaymentItemChoiceForm
 from collectives.forms.question import QuestionAnswersForm
 from collectives.models import (
@@ -232,7 +232,6 @@ def index(activity_type_id=None, name=""):
         "index.html",
         activity_types=activity_types,
         event_types=event_types,
-        photos=photos,
         filtered_activity=filtered_activity,
     )
 
@@ -297,7 +296,6 @@ def view_event(event_id, name=""):
     return render_template(
         "event/event.html",
         event=event,
-        photos=photos,
         current_time=current_time(),
         current_user=current_user,
         register_user_form=register_user_form,
