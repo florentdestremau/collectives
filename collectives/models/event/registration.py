@@ -218,6 +218,20 @@ class EventRegistrationMixin:
             if registration.user_id == user.id and registration.status in statuses
         )
 
+    def has_active_registration(self, user: "collectives.models.user.User") -> bool:
+        """Check if a user holds an active registration on this event.
+
+        Unlike :py:meth:`is_registered`, users on the waiting list, rejected,
+        unregistered or pending a license renewal are excluded.
+
+        :param user: User which will be tested.
+        :return: True if one of the user registrations is active
+        """
+        return any(
+            registration.is_active()
+            for registration in self.existing_registrations(user)
+        )
+
     def is_rejected(self, user: "collectives.models.user.User") -> bool:
         """Check if a user is rejected on this event.
 

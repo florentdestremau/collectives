@@ -118,6 +118,42 @@ class PhoneValidator:
         return "Les numéros de téléphones non françaix doivent être préfixés de leur indicatif"
 
 
+class WhatsAppLinkValidator:
+    """Custom validator to check that a link is a WhatsApp group invitation.
+
+    Refusing anything else prevents a leader from mistakenly pasting a ``wa.me``
+    link, which would expose their own phone number to every event participant.
+    """
+
+    pattern = (
+        r"^https://chat\.whatsapp\.com/[A-Za-z0-9]{10,64}(\?[A-Za-z0-9_=&%.+-]*)?$"
+    )
+    """ Regex matching a WhatsApp group invitation link.
+
+    Type: string """
+
+    def __call__(self, form, field):
+        """Validates the WhatsApp link field data.
+
+        Empty values are accepted, the field being optional.
+
+        :param form: Form of the field.
+        :param field: The WhatsApp link field.
+        """
+        if not field.data:
+            return
+
+        if not re.match(self.pattern, field.data.strip()):
+            raise ValidationError(
+                "Le lien doit être une invitation de groupe WhatsApp, "
+                "de la forme https://chat.whatsapp.com/XXXXXXXXXX"
+            )
+
+    def help_string(self):
+        """:returns: A string explaining what is accepted as a WhatsApp link"""
+        return "Lien d'invitation du groupe, de la forme https://chat.whatsapp.com/XXXXXXXXXX"
+
+
 class UniqueValidator(Unique):
     """Validator to check if a license number already exists in database"""
 

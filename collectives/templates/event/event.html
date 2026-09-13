@@ -218,6 +218,10 @@
         {% else %}
           {# Active registration or waiting list #}
 
+          {% if Configuration.WHATSAPP_ENABLED and event.whatsapp_link and event.has_active_registration(current_user) %}
+            {% include 'partials/event/whatsapp_group_link.html' %}
+          {% endif %}
+
           {%if event.is_pending_payment(current_user) %}
             <p>Votre inscription est en attente de paiement.
             <ul>

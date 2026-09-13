@@ -63,3 +63,38 @@ def check_phone(number: str) -> bool:
 
     except phonenumbers.NumberParseException:
         return False
+
+
+def to_e164(phone_str: str) -> str | None:
+    """Converts a phone number to its international E.164 representation.
+
+    :param phone_str: A phone number, possibly in french national format
+    :returns: The number as ``+33XXXXXXXXX``, or ``None`` if it cannot be parsed
+    """
+
+    if not phone_str:
+        return None
+
+    try:
+        phone = phonenumbers.parse(phone_str, "FR")
+    except phonenumbers.NumberParseException:
+        return None
+
+    if not phonenumbers.is_valid_number(phone):
+        return None
+
+    return phonenumbers.format_number(phone, phonenumbers.PhoneNumberFormat.E164)
+
+
+def to_whatsapp_number(phone_str: str) -> str | None:
+    """Converts a phone number to the format expected in ``wa.me`` links.
+
+    WhatsApp click-to-chat links expect the international number without the
+    leading ``+`` nor any separator.
+
+    :param phone_str: A phone number, possibly in french national format
+    :returns: The number as ``33XXXXXXXXX``, or ``None`` if it cannot be parsed
+    """
+
+    number = to_e164(phone_str)
+    return None if number is None else number.lstrip("+")

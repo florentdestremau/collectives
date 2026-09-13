@@ -195,6 +195,15 @@
       <label for="include_leaders_in_counts">Compter les encadrants de l'événement dans les nombres max. de participants</label>
     </div>
 
+    {% if Configuration.WHATSAPP_ENABLED %}
+    <div class="controls">
+      <label for="whatsapp_link">Groupe WhatsApp :
+        <span class="label-help">&#9432; Créez le groupe depuis votre téléphone, vous en serez administrateur. Puis « Infos du groupe » &rsaquo; « Inviter via un lien » &rsaquo; « Copier le lien » et collez-le ici : les inscrits pourront rejoindre le groupe eux-mêmes.</span>
+      </label>
+      {{ form.whatsapp_link(size=100, placeholder="https://chat.whatsapp.com/…") }}
+    </div>
+    {% endif %}
+
     <div class="dates">
       <h4 class="heading-4">Dates</h4>
       <div class="controls">

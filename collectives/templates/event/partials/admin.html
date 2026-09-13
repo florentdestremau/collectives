@@ -159,6 +159,10 @@
             </div>
             {%endif%}
             </form>
+
+            {% if Configuration.WHATSAPP_ENABLED %}
+                {% include 'partials/event/whatsapp_admin.html' %}
+            {% endif %}
     {% else %}
         <p>
             Vous ne pouvez pas voir les coordonnées des participants car vous n'avez pas signé la

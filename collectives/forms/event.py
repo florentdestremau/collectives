@@ -20,12 +20,14 @@ from wtforms import (
     RadioField,
     SelectField,
     SelectMultipleField,
+    StringField,
     SubmitField,
 )
-from wtforms.validators import DataRequired
+from wtforms.validators import DataRequired, Optional
 from wtforms_alchemy import ModelForm
 
 from collectives.forms.user_group import UserGroupForm
+from collectives.forms.validators import WhatsAppLinkValidator
 from collectives.models import (
     ActivityType,
     Configuration,
@@ -181,6 +183,12 @@ class EventForm(ModelForm, FlaskForm):
     multi_activities_mode = BooleanField("Événement multi-activités")
 
     tag_list = SelectMultipleField("Labels", coerce=int)
+
+    whatsapp_link = StringField(
+        "Lien d'invitation du groupe WhatsApp",
+        validators=[Optional(), WhatsAppLinkValidator()],
+        filters=[lambda link: link.strip() if isinstance(link, str) else link],
+    )
 
     edit_session_id = HiddenField()
 

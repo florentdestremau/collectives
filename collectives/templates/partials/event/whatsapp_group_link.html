@@ -1,0 +1,10 @@
+{# Invitation to the event WhatsApp group, shown to users holding a valid registration.
+
+   Expects: event #}
+
+<p>
+    <a class="button button-secondary" target="_blank" rel="noopener noreferrer" href="{{ event.whatsapp_link }}">
+        <img class="icon" src="{{ url_for('static', filename='img/icon/ionicon/logo-whatsapp.svg') }}" alt=""/>
+        Rejoindre le groupe WhatsApp de la collective
+    </a>
+</p>

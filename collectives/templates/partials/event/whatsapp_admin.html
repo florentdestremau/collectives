@@ -1,0 +1,89 @@
+{# WhatsApp group management, shown to event leaders in the administration block.
+
+   The group itself is created by the leader from their own phone: they are therefore
+   its administrator. Collectives only stores and distributes the invitation link.
+
+   Expects: event #}
+
+<h5 class="heading-5 collective-display--administration-title">Groupe WhatsApp</h5>
+
+{% if event.whatsapp_link %}
+    <form class="contactinfos">
+        <div class="inputGrow">
+            <label for="whatsapp_link">
+                Lien d'invitation :
+            </label>
+            <input type="text"
+                    value="{{ event.whatsapp_link }}"
+                    id="whatsapp_link"
+                    readonly
+                    class="grow padding-s"
+                    />
+            <input type="button" class="padding-s button button-primary" value="Copier" onclick="copyToClipboard('whatsapp_link')">
+            <a class="padding-s button button-primary" target="_blank" rel="noopener noreferrer" href="{{ event.whatsapp_link }}">
+                Ouvrir
+            </a>
+        </div>
+    </form>
+    <p class="text-gray">
+        Ce lien est visible par les inscrits sur la page de la collective. Pensez à révoquer
+        l'invitation depuis WhatsApp une fois la sortie passée.
+    </p>
+{% else %}
+    <p class="text-gray">
+        Aucun groupe associé à cette collective. Créez-le depuis votre téléphone — vous en serez
+        administrateur — puis « Infos du groupe » &rsaquo; « Inviter via un lien » &rsaquo; « Copier le lien »,
+        et collez-le dans <a href="{{ url_for('event.manage_event', event_id=event.id) }}">la fiche de la collective</a>.
+    </p>
+{% endif %}
+
+{% set international_phone_numbers = event.international_phone_numbers() %}
+{% if international_phone_numbers %}
+    <form class="contactinfos">
+        <div class="inputGrow margin-top-m">
+            <label for="whatsapp_phonelist">
+                Numéros des inscrits au format international :
+            </label>
+            <input type="text"
+                    value="{{ international_phone_numbers | join(', ') }}"
+                    id="whatsapp_phonelist"
+                    readonly
+                    class="grow padding-s"
+                    />
+            <input type="button" class="padding-s button button-primary" value="Copier" onclick="copyToClipboard('whatsapp_phonelist')">
+        </div>
+    </form>
+{% endif %}
+
+{% set active_registrations = event.active_registrations() %}
+{% if active_registrations %}
+    {% if event.whatsapp_link %}
+        {% set whatsapp_message = "Bonjour, voici le lien du groupe WhatsApp de la collective « " ~ event.title ~ " » du " ~ format_date(event.start) ~ " : " ~ event.whatsapp_link %}
+    {% else %}
+        {% set whatsapp_message = "Bonjour, à propos de la collective « " ~ event.title ~ " » du " ~ format_date(event.start) ~ " :" %}
+    {% endif %}
+
+    <div class="margin-top-m margin-bottom-m">
+        <label>
+            Contacter les inscrits un par un :
+            <span class="label-help">&#9432; Ouvre une conversation WhatsApp avec le message pré-rempli. Utile pour les adhérents que WhatsApp empêche d'ajouter directement à un groupe.</span>
+        </label>
+        {% for registration in active_registrations %}
+            {% set whatsapp_number = to_whatsapp_number(registration.user.phone) %}
+            <div class="margin-top-s">
+                <span class="vertical-align-middle display-inline-block" style="width: 300px;">{{ registration.user.full_name() }}</span>
+                {% if whatsapp_number %}
+                    <a class="vertical-align-middle display-inline-block padding-s button button-secondary"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        href="https://wa.me/{{ whatsapp_number }}?text={{ whatsapp_message | urlencode }}">
+                        <img class="icon" src="{{ url_for('static', filename='img/icon/ionicon/logo-whatsapp.svg') }}" alt=""/>
+                        WhatsApp
+                    </a>
+                {% else %}
+                    <span class="vertical-align-middle display-inline-block text-gray">Numéro de téléphone inutilisable</span>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}

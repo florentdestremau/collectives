@@ -720,6 +720,8 @@ def duplicate(event_id=None):
     form = EventForm(obj=event)
     form.setup_leader_actions()
     form.duplicate_event.data = event_id
+    # The WhatsApp group is specific to a single outing, do not carry it over
+    form.whatsapp_link.data = ""
 
     return render_template(
         "event/editevent.html",

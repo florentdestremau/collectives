@@ -155,6 +155,15 @@ class EventModelMixin:
 
     :type: bool"""
 
+    whatsapp_link = db.Column(db.String(255), nullable=True)
+    """Invitation link of the WhatsApp group associated to this event.
+
+    The group is created by the leader from their own phone -- they are therefore
+    its administrator -- and the invitation link is pasted here so that registered
+    users can join by themselves.
+
+    :type: string"""
+
     # Non DB attributes
     @property
     def activity_type_names(self):

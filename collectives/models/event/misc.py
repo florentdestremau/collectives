@@ -13,6 +13,7 @@ from collectives.models.question import QuestionAnswer
 from collectives.models.user import User
 from collectives.utils import render_markdown
 from collectives.utils.misc import is_valid_image
+from collectives.utils.numbers import to_e164
 
 photos = UploadSet("photos", IMAGES)
 """Upload instance for events photos
@@ -173,6 +174,17 @@ class EventMiscMixin:
             self._user_group.event_conditions[0].event_id = parent_event_id
 
         self._deprecated_parent_event_id = None
+
+    def international_phone_numbers(self) -> List[str]:
+        """Phone numbers of all users holding an active registration, in E.164 format.
+
+        Meant to build the contact list required to create the event WhatsApp group.
+        Numbers that cannot be parsed are silently omitted.
+
+        :return: The list of valid phone numbers, as ``+33XXXXXXXXX`` strings
+        """
+        numbers = (to_e164(r.user.phone) for r in self.active_registrations())
+        return [number for number in numbers if number]
 
     def user_answers(self, user: User) -> List["QuestionAnswer"]:
         """:returns: the list of answers to this event's question by a given user"""
